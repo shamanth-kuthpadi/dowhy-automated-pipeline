@@ -54,7 +54,7 @@ class EstimateEffect:
         self.estimand = identified_estimand
     
     def _estimate(self):
-        estimate = self.model_est.estimate_effect(self.estimand,
+        estimate = self.model.estimate_effect(self.estimand,
                                 method_name="backdoor.linear_regression",
                                 control_value=0,
                                 treatment_value=1,
