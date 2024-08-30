@@ -25,7 +25,10 @@ class EstimateEffect:
         self.estimate = 0
         self.pval = None
         self.graph_ref = None
-        self.algos = ['pc', 'ges', 'icalingam']
+        self.algos = ['pc', 'ges', 'icalingam'] 
+        # individualize & parallelize
+        # purposely deform a discovered graph for testing
+        # graphics that are intuitive
         self.idx = 0
 
     def _create_cgm(self):
