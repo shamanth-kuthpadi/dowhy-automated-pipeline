@@ -62,3 +62,31 @@ class EstimateEffectv2:
             raise
 
         return self.graph
+
+    def refute_cgm(self, n_perm, indep_test=gcm, cond_indep_test=gcm, apply_sugst=True, show_plt=False):
+        try:
+            result = falsify_graph(self.graph, self.data, n_permutations=n_perm,
+                                  independence_test=indep_test,
+                                  conditional_independence_test=cond_indep_test, plot_histogram=show_plt)
+            self.graph_ref = result
+            if apply_sugst is True:
+                self.graph = apply_suggestions(self.graph, result)
+        except Exception as e:
+            print(f"Error in refuting graph: {e}")
+            raise
+    
+    def identify_effect(self, treatment, outcome):
+        try:
+            model_est = CausalModel(
+                data=self.data,
+                treatment=treatment,
+                outcome=outcome,
+                graph=self.graph
+            )
+            self.model = model_est
+            identified_estimand = model_est.identify_effect(proceed_when_unidentifiable=False)
+            self.estimand = identified_estimand
+        except Exception as e:
+            print(f"Error in identifying effect: {e}")
+            raise
+    
