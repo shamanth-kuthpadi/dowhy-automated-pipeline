@@ -13,6 +13,11 @@ class EstimateEffectv2:
     def __init__(self, data):
         self.data = data
         self.graph = None
+        self.graph_ref = None
+        self.model = None
+        self.estimand = None
+        self.estimate = None
+        self.est_ref = None
     
     # For now, the only prior knowledge that the prototype will allow is required/forbidden edges
     # pk must be of the type => {'required': [list of edges to require], 'forbidden': [list of edges to forbid]}
@@ -75,18 +80,67 @@ class EstimateEffectv2:
             print(f"Error in refuting graph: {e}")
             raise
     
-    def identify_effect(self, treatment, outcome):
-        try:
-            model_est = CausalModel(
+    def create_model(self, treatment, outcome):
+        model_est = CausalModel(
                 data=self.data,
                 treatment=treatment,
                 outcome=outcome,
                 graph=self.graph
             )
-            self.model = model_est
-            identified_estimand = model_est.identify_effect(proceed_when_unidentifiable=False)
+        self.model = model_est
+
+    def identify_effect(self):
+        try:
+            identified_estimand = self.model.identify_effect(proceed_when_unidentifiable=False)
             self.estimand = identified_estimand
         except Exception as e:
             print(f"Error in identifying effect: {e}")
             raise
     
+    def estimate_effect(self, method_cat='backdoor.linear_regression', ctrl_val=0, trtm_val=1):
+        estimate = None
+        try:
+            match method_cat:
+                case 'backdoor.linear_regression':
+                    estimate = self.model.estimate_effect(self.estimand,
+                                                  method_name=method_cat,
+                                                  control_value=ctrl_val,
+                                                  treatment_value=trtm_val,
+                                                  confidence_intervals=True,
+                                                  test_significance=True)
+                # there are other estimation methods that I can add later on, however parameter space will increase immensely
+            self.estimate = estimate
+        except Exception as e:
+            print(f"Error in estimating the effect: {e}")
+            raise
+    
+    def refute_estimate(self,  method_name="placebo_treatment_refuter", placebo_type=None, subset_fraction=None):
+        ref = None
+        try:
+            match method_name:
+                case "placebo_treatment_refuter":
+                    ref = self.model.refute_estimate(
+                        self.estimand,
+                        self.estimate,
+                        method_name=method_name,
+                        placebo_type=placebo_type
+                    )
+                
+                case "random_common_cause":
+                    ref = self.model.refute_estimate(
+                        self.estimand,
+                        self.estimate,
+                        method_name=method_name
+                    )
+                case "data_subset_refuter":
+                    ref = self.model.refute_estimate(
+                        self.estimand,
+                        self.estimate,
+                        method_name=method_name,
+                        subset_fraction=subset_fraction
+                    )
+            self.est_ref = ref
+        
+        except Exception as e:
+            print(f"Error in refuting estimate: {e}")
+            raise
