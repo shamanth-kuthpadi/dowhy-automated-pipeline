@@ -20,12 +20,16 @@ While I will not go into the motivation or reasoning behind this pipeline, I wil
 
 The source code has a bunch of different files and so it is worthwhile to address any foreseen confusions. 
 
-At the moment, there are two versions of the model `EstimateEffect.py` and `EstimateEffectv2.py`. The former is outdated and should not be used, it is simply there for reference purposes and will be removed soon. The latter is the file containing the architecture to model the aforementioned pipeline for effect estimation.
+`EstimateEffect.py`contains the architecture to model the aforementioned pipeline for effect estimation.
 
-`run.ipynb` is a notebook mainly used for informal testing whereas `tester.py` has unit tests that formally test the definitions in `EstimateEffectv2.py`. Please do note that, currently, not all definitions have been fully tested.
+`run_sachs.ipynb` is a notebook mainly used for informal testing whereas `tester.py` has unit tests that formally test the definitions in `EstimateEffect.py`. Please do note that, currently, not all definitions have been fully tested.
 
 `data` is a directory containing the incredibly popular Sachs dataset.
 
 `util.py` is simply a storage for utility functions that are used in various parts of this project.
 
-## `EstimateEffectv2.py`
+## How to Use `EstimateEffect.py`
+
+Really, the guideline to use the automated model follows the pipeline architecture. As a preliminary, load your data as a Pandas DataFrame.
+
+Look at the example notebook `run_sachs.ipynb` to understand and learn how to use the model. In this notebook you should also be able to see the various parameters and return values of definitions/methods.
