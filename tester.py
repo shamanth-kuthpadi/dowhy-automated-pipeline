@@ -1,15 +1,14 @@
 import unittest
 import pandas as pd
 from util import *
-from EstimateEffectv2 import EstimateEffectv2  # Adjust the import based on your project structure
+from EstimateEffect import EstimateEffect
 
 class TestEstimateEffectv2(unittest.TestCase):
     
     @classmethod
     def setUpClass(cls):
-        # Load your specific dataset
         cls.data = load_from_txt('/Users/shamanthk/Documents/eval-dowhy-caunex/datasets/sachs.2005.continuous.txt')
-        cls.estimator = EstimateEffectv2(cls.data)
+        cls.estimator = EstimateEffect(cls.data)
     
     def test_pc_algorithm(self):
         try:

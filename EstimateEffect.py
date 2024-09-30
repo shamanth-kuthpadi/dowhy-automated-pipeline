@@ -1,12 +1,8 @@
-'''
-The purpose of this file is to try all the various causal-learn algorithms
-and find the best causal model for the given dataset
-'''
-
 from causallearn.search.ConstraintBased.PC import pc
 from causallearn.search.ScoreBased.GES import ges
 from causallearn.search.FCMBased import lingam
 from causallearn.utils.PDAG2DAG import pdag2dag
+from causallearn.search.FCMBased.lingam.utils import make_dot
 from util import *
 import dowhy.gcm.falsify
 from dowhy.gcm.falsify import falsify_graph
@@ -14,148 +10,148 @@ from dowhy.gcm.falsify import apply_suggestions
 from dowhy import CausalModel
 
 class EstimateEffect:
-    def __init__(self, df, treatment, outcome, perm=100):
-        self.data = df
+    def __init__(self, data):
+        self.data = data
         self.graph = None
-        self.perm = perm
-        self.trtment = treatment
-        self.otce = outcome
-        self.estimand = None
-        self.model = None
-        self.estimate = 0
-        self.pval = None
         self.graph_ref = None
-        self.algos = ['pc', 'ges', 'icalingam'] 
-        # individualize & parallelize
-        # purposely deform a discovered graph for testing
-        # graphics that are intuitive
-        self.idx = 0
-
-    def _create_cgm(self):
-        algorithm = self.algos[self.idx]
+        self.model = None
+        self.estimand = None
+        self.estimate = None
+        self.est_ref = None
+    
+    # For now, the only prior knowledge that the prototype will allow is required/forbidden edges
+    # pk must be of the type => {'required': [list of edges to require], 'forbidden': [list of edges to forbid]}
+    def find_causal_graph(self, algo='pc', pk=None):
+        df = self.data.to_numpy()
+        labels = list(self.data.columns)
         try:
-            match algorithm:
+            match algo:
                 case 'pc':
-                    df = self.data.to_numpy()
-                    labels = self.data.columns
                     cg = pc(data=df, show_progress=False, node_names=labels)
                     cg = pdag2dag(cg.G)
                     predicted_graph = genG_to_nx(cg, labels)
                     self.graph = predicted_graph
-                    return
                 case 'ges':
-                    df = self.data.to_numpy()
-                    labels = self.data.columns
-                    cg = ges(data=df, show_progress=False, node_names=labels)
+                    cg = ges(X=df, node_names=labels)
                     cg = pdag2dag(cg['G'])
                     predicted_graph = genG_to_nx(cg, labels)
                     self.graph = predicted_graph
-                    return
                 case 'icalingam':
                     model = lingam.ICALiNGAM()
                     model.fit(df)
+                    pyd_lingam = make_dot(model.adjacency_matrix_, labels=labels)
                     pyd_lingam = pyd_lingam.pipe(format='dot').decode('utf-8')
                     pyd_lingam = (pyd_lingam,) = graph_from_dot_data(pyd_lingam)
                     dot_data_lingam = pyd_lingam.to_string()
-                    predicted_graph = genG_to_nx(dot_data_lingam, labels)
+                    pydot_graph_lingam = graph_from_dot_data(dot_data_lingam)[0]
+                    predicted_graph = nx.drawing.nx_pydot.from_pydot(pydot_graph_lingam)
+                    predicted_graph = nx.DiGraph(predicted_graph)
                     self.graph = predicted_graph
-
+            
+            if pk is not None:
+                # ensuring that pk is indeed of the right type
+                if not isinstance(pk, dict):
+                    print(f"Please ensure that the prior knowledge is of the right form")
+                    raise
+                # are there any edges to require
+                if 'required' in pk.keys():
+                    eb = pk['required']
+                    self.graph.add_edges_from(eb)
+                # are there any edges to remove
+                if 'forbidden' in pk.keys():
+                    eb = pk['forbidden']
+                    self.graph.remove_edges_from(eb)
+        
         except Exception as e:
             print(f"Error in creating causal graph: {e}")
             raise
 
-    def _refute_graph(self):
+        return self.graph
+
+    def refute_cgm(self, n_perm=100, indep_test=gcm, cond_indep_test=gcm, apply_sugst=True, show_plt=False):
         try:
-            result = falsify_graph(self.graph, self.data, n_permutations=self.perm,
-                                  independence_test=gcm,
-                                  conditional_independence_test=gcm)
+            result = falsify_graph(self.graph, self.data, n_permutations=n_perm,
+                                  independence_test=indep_test,
+                                  conditional_independence_test=cond_indep_test, plot_histogram=show_plt)
             self.graph_ref = result
-            mod_graph = apply_suggestions(self.graph, result)
-            self.graph = mod_graph
+            if apply_sugst is True:
+                self.graph = apply_suggestions(self.graph, result)
+            
         except Exception as e:
             print(f"Error in refuting graph: {e}")
             raise
 
-    def _identify_effect(self):
-        try:
-            model_est = CausalModel(
+        return self.graph
+    
+    def create_model(self, treatment, outcome):
+        model_est = CausalModel(
                 data=self.data,
-                treatment=self.trtment,
-                outcome=self.otce,
+                treatment=treatment,
+                outcome=outcome,
                 graph=self.graph
             )
-            self.model = model_est
-            identified_estimand = model_est.identify_effect(proceed_when_unidentifiable=False)
+        self.model = model_est
+        return self.model
+
+    def identify_effect(self):
+        try:
+            identified_estimand = self.model.identify_effect(proceed_when_unidentifiable=False)
             self.estimand = identified_estimand
         except Exception as e:
             print(f"Error in identifying effect: {e}")
             raise
-
-    def _estimate(self, method_name="backdoor.linear_regression"):
+        return self.estimand
+    
+    def estimate_effect(self, method_cat='backdoor.linear_regression', ctrl_val=0, trtm_val=1):
+        estimate = None
         try:
-            estimate = self.model.estimate_effect(self.estimand,
-                                                  method_name=method_name,
-                                                  control_value=0,
-                                                  treatment_value=1,
+            match method_cat:
+                case 'backdoor.linear_regression':
+                    estimate = self.model.estimate_effect(self.estimand,
+                                                  method_name=method_cat,
+                                                  control_value=ctrl_val,
+                                                  treatment_value=trtm_val,
                                                   confidence_intervals=True,
                                                   test_significance=True)
+                # there are other estimation methods that I can add later on, however parameter space will increase immensely
             self.estimate = estimate
         except Exception as e:
-            print(f"Error in estimating effect: {e}")
+            print(f"Error in estimating the effect: {e}")
             raise
 
-    def _refute_estimate(self, method_name="placebo_treatment_refuter"):
+        return self.estimate
+    
+    # should give a warning to users if the estimate is to be refuted
+
+    def refute_estimate(self,  method_name="placebo_treatment_refuter", placebo_type=None, subset_fraction=None):
+        ref = None
         try:
-            refute_placebo_treatment = self.model.refute_estimate(
-                self.estimand,
-                self.estimate,
-                method_name=method_name,
-                placebo_type="permute"
-            )
-            self.pval = refute_placebo_treatment
+            match method_name:
+                case "placebo_treatment_refuter":
+                    ref = self.model.refute_estimate(
+                        self.estimand,
+                        self.estimate,
+                        method_name=method_name,
+                        placebo_type=placebo_type
+                    )
+                
+                case "random_common_cause":
+                    ref = self.model.refute_estimate(
+                        self.estimand,
+                        self.estimate,
+                        method_name=method_name
+                    )
+                case "data_subset_refuter":
+                    ref = self.model.refute_estimate(
+                        self.estimand,
+                        self.estimate,
+                        method_name=method_name,
+                        subset_fraction=subset_fraction
+                    )
+            self.est_ref = ref
+        
         except Exception as e:
             print(f"Error in refuting estimate: {e}")
             raise
-
-    def get_refutation_results(self):
-        print("Refuted Graph:")
-        print(self.graph_ref)
-        print("Refutation p-value:")
-        print(self.pval)
-
-    def perform_effect_estimation(self, estimation_method="backdoor.linear_regression", refutation_method="placebo_treatment_refuter"):
-        significant = True
-        while significant is True and self.idx < len(self.algos):
-            try:
-                # Create the causal graph
-                self._create_cgm()
-                
-                # Refute the causal graph and apply suggestions
-                self._refute_graph()
-
-                # Identify the estimand
-                self._identify_effect()
-
-                # Estimate the effect
-                self._estimate(method_name=estimation_method)
-
-                # Refute the estimate
-                self._refute_estimate(method_name=refutation_method)
-
-                print(self.estimate)
-
-                if self.pval.refutation_result['is_statistically_significant'] is False:
-                    significant = False
-                    return self.estimate
-                else:
-                    if self.idx == len(self.algos)-1:
-                        print("Best estimate found, but it should be considered with caution.")
-                        return self.estimate
-                    self.idx += 1
-            except Exception as e:
-                print(f"Error during effect estimation with {self.algos[self.idx]}: {e}")
-                raise
-
-
-
-
+            
+        return self.est_ref
