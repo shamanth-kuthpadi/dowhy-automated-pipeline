@@ -148,6 +148,8 @@ class EstimateEffect:
                         method_name=method_name,
                         subset_fraction=subset_fraction
                     )
+            if ref.refutation_result['is_statistically_significant']:
+                print("Please make sure to take a revisit the pipeline as the refutation p-val is significant: ", ref.refutation_result['p_value'])
             self.est_ref = ref
         
         except Exception as e:
@@ -155,3 +157,6 @@ class EstimateEffect:
             raise
             
         return self.est_ref
+    
+    
+
