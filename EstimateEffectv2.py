@@ -68,7 +68,7 @@ class EstimateEffectv2:
 
         return self.graph
 
-    def refute_cgm(self, n_perm, indep_test=gcm, cond_indep_test=gcm, apply_sugst=True, show_plt=False):
+    def refute_cgm(self, n_perm=100, indep_test=gcm, cond_indep_test=gcm, apply_sugst=True, show_plt=False):
         try:
             result = falsify_graph(self.graph, self.data, n_permutations=n_perm,
                                   independence_test=indep_test,
@@ -76,9 +76,12 @@ class EstimateEffectv2:
             self.graph_ref = result
             if apply_sugst is True:
                 self.graph = apply_suggestions(self.graph, result)
+            
         except Exception as e:
             print(f"Error in refuting graph: {e}")
             raise
+
+        return self.graph
     
     def create_model(self, treatment, outcome):
         model_est = CausalModel(
@@ -88,6 +91,7 @@ class EstimateEffectv2:
                 graph=self.graph
             )
         self.model = model_est
+        return self.model
 
     def identify_effect(self):
         try:
@@ -96,6 +100,7 @@ class EstimateEffectv2:
         except Exception as e:
             print(f"Error in identifying effect: {e}")
             raise
+        return self.estimand
     
     def estimate_effect(self, method_cat='backdoor.linear_regression', ctrl_val=0, trtm_val=1):
         estimate = None
@@ -113,6 +118,8 @@ class EstimateEffectv2:
         except Exception as e:
             print(f"Error in estimating the effect: {e}")
             raise
+
+        return self.estimate
     
     def refute_estimate(self,  method_name="placebo_treatment_refuter", placebo_type=None, subset_fraction=None):
         ref = None
@@ -144,3 +151,5 @@ class EstimateEffectv2:
         except Exception as e:
             print(f"Error in refuting estimate: {e}")
             raise
+            
+        return self.est_ref
