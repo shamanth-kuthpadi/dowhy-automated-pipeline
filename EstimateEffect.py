@@ -68,6 +68,10 @@ class EstimateEffect:
 
         return self.graph
 
+    # What if user already has a graph they would like to input
+    def input_causal_graph(self, graph):
+        self.graph = graph
+
     def refute_cgm(self, n_perm=100, indep_test=gcm, cond_indep_test=gcm, apply_sugst=True, show_plt=False):
         try:
             result = falsify_graph(self.graph, self.data, n_permutations=n_perm,
