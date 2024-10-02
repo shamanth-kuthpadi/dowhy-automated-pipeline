@@ -34,8 +34,8 @@ class TestEstimateEffectv2(unittest.TestCase):
         except Exception as e:
             self.fail(f"ICALiNGAM Algorithm failed with exception: {e}")
     
-    def test_prior_knowledge_integration(self):
-        required_edges = [('akt', 'pip3')]  # Example edges; replace with your specifics
+    def test_prior_knowledge(self):
+        required_edges = [('akt', 'pip3')] 
         forbidden_edges = [('akt', 'jnk')]
         pk_obj = {'required': required_edges, 'forbidden': forbidden_edges}
         try:
@@ -44,9 +44,35 @@ class TestEstimateEffectv2(unittest.TestCase):
                 pk=pk_obj
             )
             self.assertIsNotNone(graph)
-            # Further assertions can be added to check if the required/forbidden edges are present/absent
+
             print("Prior knowledge integrated successfully.")
         except Exception as e:
+            self.fail(f"Prior knowledge integration failed with exception: {e}")
+    
+    def test_prior_knowledge_integration(self):
+        required_edges = [('akt', 'pip3')]  
+        forbidden_edges = [('akt', 'jnk')]
+        pk_obj = {'required': required_edges, 'forbidden': forbidden_edges}
+        
+        try:
+            graph = self.estimator.find_causal_graph(
+                algo='pc',
+                pk=pk_obj
+            )
+    
+            self.assertIsNotNone(graph)
+            generated_edges = set(graph.edges())
+
+            for edge in required_edges:
+                self.assertIn(edge, generated_edges, f"Required edge {edge} is missing from the graph.")
+
+            for edge in forbidden_edges:
+                self.assertNotIn(edge, generated_edges, f"Forbidden edge {edge} is present in the graph.")
+
+            print("Prior knowledge integrated successfully.")
+        
+        except Exception as e:
+
             self.fail(f"Prior knowledge integration failed with exception: {e}")
 
 if __name__ == '__main__':
