@@ -123,7 +123,7 @@ class EstimateEffect:
     
     # should give a warning to users if the estimate is to be refuted
 
-    def refute_estimate(self,  method_name="placebo_treatment_refuter", placebo_type=None, subset_fraction=None):
+    def refute_estimate(self,  method_name="placebo_treatment_refuter", placebo_type='permute', subset_fraction=0.9):
         ref = None
         try:
             match method_name:
@@ -148,8 +148,28 @@ class EstimateEffect:
                         method_name=method_name,
                         subset_fraction=subset_fraction
                     )
-            if ref.refutation_result['is_statistically_significant']:
+                case "ALL":
+                    ref_placebo = self.model.refute_estimate(
+                        self.estimand,
+                        self.estimate,
+                        method_name=method_name,
+                        placebo_type=placebo_type
+                    )
+                    ref_rand_cause = self.model.refute_estimate(
+                        self.estimand,
+                        self.estimate,
+                        method_name=method_name
+                    )
+                    ref_subset = self.model.refute_estimate(
+                        self.estimand,
+                        self.estimate,
+                        method_name=method_name,
+                        subset_fraction=subset_fraction
+                    )
+                    ref = [ref_placebo, ref_rand_cause, ref_subset]
+            if not isinstance(ref, list) and ref.refutation_result['is_statistically_significant']:
                 print("Please make sure to take a revisit the pipeline as the refutation p-val is significant: ", ref.refutation_result['p_value'])
+    
             self.est_ref = ref
         
         except Exception as e:
@@ -158,5 +178,12 @@ class EstimateEffect:
             
         return self.est_ref
     
+    def get_all_information(self):
+        return {'graph': self.graph, 
+                'graph_refutation_res': self.graph_ref,
+                'estimand_expression': self.estimand,
+                'effect_estimate': self.estimate,
+                'estimate_refutation_res': self.est_ref
+                }
     
 
