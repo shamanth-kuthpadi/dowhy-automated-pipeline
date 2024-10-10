@@ -97,9 +97,23 @@ class EstimateEffect:
         self.model = model_est
         return self.model
 
-    def identify_effect(self):
+    def identify_effect(self, method=None):
         try:
-            identified_estimand = self.model.identify_effect(proceed_when_unidentifiable=False)
+            '''
+            [directly from DoWhy's documentation]
+            maximal-adjustment: returns the maximal set that satisfies the backdoor criterion. This is usually the fastest way to find a valid backdoor set, but the set may contain many superfluous variables.
+
+            minimal-adjustment: returns the set with minimal number of variables that satisfies the backdoor criterion. This may take longer to execute, and sometimes may not return any backdoor set within the maximum number of iterations.
+
+            exhaustive-search: returns all valid backdoor sets. This can take a while to run for large graphs.
+
+            default: This is a good mix of minimal and maximal adjustment. It starts with maximal adjustment which is usually fast. It then runs minimal adjustment and returns the set having the smallest number of variables.
+            '''
+            if method is None:
+                identified_estimand = self.model.identify_effect()
+            else:
+                identified_estimand = self.model.identify_effect(method=method)
+                
             self.estimand = identified_estimand
         except Exception as e:
             print(f"Error in identifying effect: {e}")
