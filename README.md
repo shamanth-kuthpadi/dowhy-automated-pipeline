@@ -95,5 +95,43 @@ causal_graph = estimator.find_causal_graph(algo='ges', pk={'required': [('X', 'Y
 This method refutes the previously discovered causal graphical model and applies suggestions that are returned by the algorithm (if it is set to true).
 
 * Parameters:
+   * `n_perm`: number of graphs to randomly permute
+   * `indep_test`: for now, just leave this at default (used to perform independent tests between two random variables within our model)
+   * `cond_indep_test`: for now, just leave this at default (used to perform conditional independent tests for a set of random variables within our model)
+   * `apply_sugst`: the falsification procedure performed by DoWhy returns a set of suggestions, the parameter is a boolean indicating if we would like to apply those suggestions or not 
+   * `show_plt`: once the falsification is done, this boolean checks if we would like to present a graph showcasing the p-val
+
+* Returns: a new graph that either has the suggestions applied or not
+
+* Usage Example:
+```python
+rcgm = estimator.refute_cgm(n_perm=100, show_plt=True)
+```
+
+---
+
+`create_model(self, treatment, outcome)`
+
+Once we have a statistically corraborated causal graph, we need to represent in a way that DoWhy can understand. Thus, the purpose of this method is to create a DoWhy-interpretable model.
+
+* Parameters:
+   * `treatment`: the variable that we will be intervening on
+   * `outcome`: the variable that we will checking to see if the intervention had any effect on
+
+* Returns: a CausalModel
+
+*  Usage Example:
+```python
+model = create_model(treatment='pka', outcome='pip2')
+```
+
+---
+
+`identify_effect(self)`
+
+This method simply identifies an estimand expression from our causal model.
+
+---
+
 
 
