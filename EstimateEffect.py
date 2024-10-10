@@ -99,25 +99,21 @@ class EstimateEffect:
 
     def identify_effect(self, method=None):
         try:
-            '''
-            [directly from DoWhy's documentation]
-            maximal-adjustment: returns the maximal set that satisfies the backdoor criterion. This is usually the fastest way to find a valid backdoor set, but the set may contain many superfluous variables.
-
-            minimal-adjustment: returns the set with minimal number of variables that satisfies the backdoor criterion. This may take longer to execute, and sometimes may not return any backdoor set within the maximum number of iterations.
-
-            exhaustive-search: returns all valid backdoor sets. This can take a while to run for large graphs.
-
-            default: This is a good mix of minimal and maximal adjustment. It starts with maximal adjustment which is usually fast. It then runs minimal adjustment and returns the set having the smallest number of variables.
-            '''
             if method is None:
                 identified_estimand = self.model.identify_effect()
             else:
                 identified_estimand = self.model.identify_effect(method=method)
-                
+
             self.estimand = identified_estimand
         except Exception as e:
             print(f"Error in identifying effect: {e}")
             raise
+
+        print("Note that you can also use other methods for the identification process. Below are method descriptions taken directly from DoWhy's documentation")
+        print("maximal-adjustment: returns the maximal set that satisfies the backdoor criterion. This is usually the fastest way to find a valid backdoor set, but the set may contain many superfluous variables.")
+        print("minimal-adjustment: returns the set with minimal number of variables that satisfies the backdoor criterion. This may take longer to execute, and sometimes may not return any backdoor set within the maximum number of iterations.")
+        print("exhaustive-search: returns all valid backdoor sets. This can take a while to run for large graphs.")
+        print("default: This is a good mix of minimal and maximal adjustment. It starts with maximal adjustment which is usually fast. It then runs minimal adjustment and returns the set having the smallest number of variables.")
         return self.estimand
     
     def estimate_effect(self, method_cat='backdoor.linear_regression', ctrl_val=0, trtm_val=1):
@@ -136,7 +132,8 @@ class EstimateEffect:
         except Exception as e:
             print(f"Error in estimating the effect: {e}")
             raise
-
+        
+        print("Note that it is ok for your treatment to be a continuous variable, DoWhy automatically discretizes at the backend.")
         return self.estimate
     
     # should give a warning to users if the estimate is to be refuted
